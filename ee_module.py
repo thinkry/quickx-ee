@@ -15,7 +15,14 @@ class field:
         self.parent = None
 
     def str(self):
-        return const.lineDelim + '%s@field [parent=#%s] %s %s' % (const.lineBegin, self.parent, self.name, self.comment) + const.EOL + const.EOL
+        parent = 'global'
+        if self.parent:
+            parent = self.parent.fullName()
+
+        if len(self.comment) > 0:
+            return const.lineDelim + self.comment
+        else:
+            return const.lineDelim + const.lineBegin + '@field [parent=#%s] %s' % (parent, self.name) + const.EOL
 
 class function:
     def __init__(self, name):
@@ -67,12 +74,14 @@ class module:
         return ret
 
     def addFunction(self, function):
-        function.parent = self
-        self.functions.append(function)
+        if not function.name in self.functions:
+            function.parent = self
+            self.functions.append(function)
 
     def addField(self, field):
-        field.parent = self
-        self.fields.append(field)
+        if not field.name in self.fields:
+            field.parent = self
+            self.fields.append(field)
 
     def output(self, dir):
         s = const.lineDelim
@@ -94,13 +103,18 @@ class module:
     #根据一个字符串返回module
     #skipLast = True时表明字符串的最后一段是函数或变量, 例如cc.net.Socket:test  cc.sdk.pay
     @classmethod
-    def getModuleByNames(cls, names, skipLast):
-        ms = names.replace(':', '.').split('.')
-        if len(ms) == 0:
-            print '%s invalid' % names
-            return None       
+    def getModuleByName(cls, name, skipLast, parents = None, supers = None, renames = None):
+        if renames and name in renames:  #处理module重命名的情况
+            name = renames[name]
+
+        ms = name.replace(':', '.').split('.')
+        assert(len(ms) > 0)
         if len(ms) == 1:
-            return cls.root()
+            #需要检查parents
+            if parents and ms[0] in parents:
+                return cls.getModuleByName(parents[ms[0]]+'.'+ms[0], False, None, supers, renames)
+            else:
+                return cls.root()
 
         ret = cls.root()
         if skipLast: ms = ms[:-1]
@@ -110,6 +124,9 @@ class module:
             else:
                 tmp = module(m)
                 tmp.parent = ret
+                fullname = tmp.fullName()
+                if supers and fullname in supers:  #继承关系
+                    tmp.extends = supers[fullname]
                 ret.children[m] = tmp
                 ret = tmp
         return ret
