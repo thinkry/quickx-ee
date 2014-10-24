@@ -3,13 +3,23 @@
 
 import sys, os, re, ee_module, ee_parser
 
+def getQuickxFrameworkDir():
+    ret = os.environ.get('QUICK_COCOS2DX_ROOT')
+    if not ret or len(ret) == 0:
+        ret = os.environ.get('QUICK_V3_ROOT')
+    if not ret or len(ret) == 0:
+        print 'ERROR: QUICK_COCOS2DX_ROOT and QUICK_V3_ROOT not found in os.environ'
+        return None
+    docluaDir = os.path.join(ret, 'quick', 'framework')
+    return docluaDir
+
 class gen:
     def __init__(self):
         pass
     
     def __getModuleByName(self, name, skipLast):
         return ee_module.module.getModuleByName(name, skipLast, self.parents, self.supers, self.renames)
-    
+
     #-------------------------------------------------------
     #处理有注释的函数
     def __parseCommentFunction(self, funcName, comment):
@@ -27,10 +37,10 @@ class gen:
         #在把@function插入在合适的地方
         pos = s.find('@')
         if pos >= 0:
-            tmp = s[:pos] + '@function [parent=#%s] %s%s-- ' % (parent, shortName, ee_module.const.EOL) + s[pos:] + ee_module.const.EOL
+            tmp = ee_module.const.lineDelim + s[:pos] + '@function [parent=#%s] %s%s-- ' % (parent, shortName, ee_module.const.EOL) + s[pos:] + ee_module.const.EOL
         else:
-            tmp = s + ee_module.const.EOL + '-- @function [parent=#%s] %s%s' % (parent, shortName, ee_module.const.EOL)
-            
+            tmp = ee_module.const.lineDelim + s + ee_module.const.EOL + '-- @function [parent=#%s] %s%s' % (parent, shortName, ee_module.const.EOL)
+
         #把@param string这种替换为@param #string
         p = re.compile(r'(.*)(@param[ \t]+)(string|number|table|function|integer|boolean|mixed)([^\n\r]*)')
         tmp = p.sub(r'\1\2\4,\3', tmp)
@@ -86,7 +96,7 @@ class gen:
         #每行前面加上-- ，这是ee的要求
         p = re.compile(r'(\n[- \t]*)(.*)')
         s = p.sub(r'\n-- \2', s).lstrip()
-        tmp = s + ee_module.const.EOL + '-- @field [parent=#%s] %s' % (parent, shortName) + ee_module.const.EOL        
+        tmp = ee_module.const.lineDelim + s + ee_module.const.EOL + '-- @field [parent=#%s] %s' % (parent, shortName) + ee_module.const.EOL        
 
         f = ee_module.field(shortName)
         f.comment = tmp
@@ -162,9 +172,9 @@ class gen:
     #处理单个lua文件
     # @param src 要处理的lua文件
     # @param vars 用来指定src中要捕获变量的模块名，例如  cc.TEST = 1这种就需要填cc，多个模块名用|连接，例如cc|ccs
-    # @param parents 用来指定src中出现的模块名的父模块，例如UIButton>cc.ui|Socket>cc.net，父模块请填写全名
-    # @param supers 用来指定src中出现的模块名的基类，例如UICheckBoxButton>cc.ui.UIButton，基类请填写全名
-    # @param renames 用来指定src中出现的模块名的重命名信息，例如Store>cc.sdk.pay，新名字请写全名
+    # @param parents 用来指定模块的父模块信息，例如Store>cc|Socket>cc.net，模块名是shortname，父模块名是fullname
+    # @param supers 用来指定模块的基类信息，例如Store>cc.Ref|Socket>cc.Ref，模块名是shortname，基类是fullname
+    # @param renames 用来指定模块的重命名信息，例如Store>pay|Socket>socket，模块名是shortname，新名字也是shortname
     def doFile(self, src, vars = None, parents = None, supers = None, renames = None):
         self.__handleArgs(vars, parents, supers, renames)
 
@@ -209,12 +219,23 @@ class gen:
                 else:
                     self.__doCommentVar(-1, -1, start, end)
 
-    @staticmethod
-    def __output(m, dir):
-        if m:
-            m.output(dir)
-            for child in m.children:
-                gen.__output(m.children[child], dir)
+    def doQuickx(self):
+        #获取framework目录
+        docluaDir = getQuickxFrameworkDir()
+        if not docluaDir:
+            return
 
-    def output(self, dir):
-        gen.__output(ee_module.module.root(), dir)
+        #获取ini文件
+        my = ee_module.getCurrDir()
+        data = open(os.path.join(my, 'quickx.ini'), 'rb').read()
+        lines = data.split('\n')
+        for line in lines:
+            line = line.strip()
+            pos = line.find('#')  #去掉注释
+            if pos >= 0:
+                line = line[:pos]
+            if line == '': continue
+            items = line.split(',')
+            if len(items) <> 5:
+                print '%s invalid' % line
+            self.doFile(os.path.join(docluaDir, items[0]), items[1], items[2], items[3], items[4])

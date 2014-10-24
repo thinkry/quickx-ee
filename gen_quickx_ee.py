@@ -16,60 +16,25 @@
 #   |- quickx3.2-lua5.1.rockspec: 存放最终ee文件中的rockspec文件，该文件不存在时会创建
 #   gen_quickx_ee.py:  本脚本
 
-import sys, os, re, shutil, ee_gen
+import sys, os, re, shutil, time, ee_gen, ee_cocos2dx, ee_module
 
 #--------------------------------------------------------------------
-
-#从环境变量中获取quickx的路径
-def getQuickxRoot():
-    ret = os.environ.get('QUICK_COCOS2DX_ROOT')
-    if len(ret) > 0:
-        return ret
-    ret = os.environ.get('QUICK_V3_ROOT')
-    if len(ret) > 0:
-        return ret
-    return ''  #这里直接指定
-
-#从环境变量中获取cocos2dx的路径
-def getCocos2dxRoot():
-    ret = os.environ.get('COCOS2DX_ROOT')
-    if len(ret) > 0:
-        return ret
-    return ''  #这里直接指定
-
-#quickx路径的定义
-QUICKX_ROOT = getQuickxRoot()
-QUICKX_FRAMEWORK_DIR = os.path.join(QUICKX_ROOT, 'quick', 'framework')
-
-#cocos2dx路径的定义
-COCOS2DX_ROOT = getCocos2dxRoot()
-COCOS2DX_DOCLUA_DIR = os.path.join(COCOS2DX_ROOT, 'cocos', 'scripting', 'lua-bindings', 'auto', 'api')
-
-#--------------------------------------------------------------------
-
-#获取脚本文件的当前路径
-def getCurrDir():
-    #获取脚本路径
-    path = sys.path[0]
-    #判断为脚本文件还是py2exe编译后的文件，如果是脚本文件，则返回的是脚本的目录，如果是py2exe编译后的文件，则返回的是编译后的文件路径
-    if os.path.isdir(path):
-       return path
-    elif os.path.isfile(path):
-       return os.path.dirname(path)
 
 #初始检查：lua5.1目录是否存在，quickx framework和cocos2dx doclua是否存在
 def checkEnv():
-    root = getCurrDir()
+    root = ee_module.getCurrDir()
     luaDir = os.path.join(root, 'lua5.1')
     if not os.path.exists(luaDir):
         print 'ERROR: lua5.1 directory not exist!'
         return False
     
-    if not os.path.exists(QUICKX_FRAMEWORK_DIR):
+    path = ee_gen.getQuickxFrameworkDir()
+    if not path or not os.path.exists(path):
         print 'ERROR: quickx framework directory not exist!'
         return False
-        
-    if not os.path.exists(COCOS2DX_DOCLUA_DIR):
+
+    path = ee_cocos2dx.getCososDocluaDir()
+    if not os.path.exists(path):
         print 'ERROR: cocos2dx doclua directory not exist!'
         return False
     
@@ -77,13 +42,13 @@ def checkEnv():
 
 #创建release目录及子目录，如果目录已存在则清空目录里的文件
 def createDir():
-    root = getCurrDir()
+    root = ee_module.getCurrDir()
     releaseDir = os.path.join(root, 'release')
     if os.path.exists(releaseDir):
         shutil.rmtree(releaseDir)
+        time.sleep(2)
     os.mkdir(releaseDir)
     os.mkdir(os.path.join(releaseDir, 'api'))
-    os.mkdir(os.path.join(releaseDir, 'docs'))
 
 #创建rockspec文件
 def createRockspec():
@@ -102,43 +67,25 @@ def createRockspec():
     d += 'documentation ={\r\n'
     d += '    dir="docs"\r\n'
     d += '}\r\n'
-    open(os.path.join(getCurrDir(), 'quickx3.2-lua5.1.rockspec'), 'wb').write(d)
+    open(os.path.join(ee_module.getCurrDir(), 'release', 'quickx3.2-lua5.1.rockspec'), 'wb').write(d)
 
 #把lua5.1里的api和docs复制到release目录下的对应位置
 def copyLua():
-    root = getCurrDir()
-    src = os.path.join(root, 'lua5.1', 'api')
-    dst = os.path.join(root, 'release', 'api')
-    shutil.copytree(src, dst)
-    
+    root = ee_module.getCurrDir()
     src = os.path.join(root, 'lua5.1', 'docs')
     dst = os.path.join(root, 'release', 'docs')
     shutil.copytree(src, dst)
 
-#处理单个cocos2dx doclua文件
-def handleCocos2dxDoclua(src, dst):
-    srcData = open(src).read()
-    p = re.compile(r'@extend[ \t]+')
-    data = p.sub(r'@extends ', srcData)  #把@extend改为extends
-    open(dst).write(data)
-
-#把cocos2dx doclua边复制，边处理到对应位置下
-def handleCocos2dx():
-    my = getCurrDir()
-    for root, dirs, files in os.walk(COCOS2DX_DOCLUA_DIR):
-        for file in files:
-            src = os.path.join(root, file)
-            dst = os.path.join(my, 'release', 'api', os.path.basename(src))
-            handleCocos2dxDoclua(src, dst)
+#对quickx framework生成doclua
+def handleQuickx():
+    p = ee_cocos2dx.docluaParse()
+    p.doLua()
+    p.doCocos2dx()
 
 #对quickx framework生成doclua
 def handleQuickx():
-    my = getCurrDir()
-    for root, dirs, files in os.walk(QUICKX_FRAMEWORK_DIR):
-        for file in files:
-            src = os.path.join(root, file)
-            dst = os.path.join(my, 'release', 'api', os.path.basename(src))
-            doFile(src, dst, 'cc', '')   
+    g = ee_gen.gen()
+    g.doQuickx()
 
 #压缩成zip
 def zipEe():
@@ -146,7 +93,6 @@ def zipEe():
 
 #--------------------------------------------------------------------
 def main():
-    pass
     #初始检查：lua5.1目录是否存在，quickx framework和cocos2dx doclua是否存在
     if not checkEnv(): return
 
@@ -156,15 +102,19 @@ def main():
     #创建rockspec文件
     createRockspec()
     
-    #把lua5.1里的api和docs复制到release目录下的对应位置
+    #把lua5.1里的docs复制到release目录下的对应位置
     copyLua()
-    
+
     #把cocos2dx doclua边复制，边处理到对应位置下
-    handleCocos2dx()
+    #handleCocos2dx()
     
     #对quickx framework生成doclua
     handleQuickx()
-    
+
+    #输出
+    dst = os.path.join(ee_module.getCurrDir(), 'release', 'api')
+    ee_module.module.outputAll(dst)
+
     #压缩成zip
     zipEe()
 
