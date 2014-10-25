@@ -12,7 +12,7 @@ def getCososDocluaDir():
     docluaDir = os.path.join(cocos, 'cocos', 'scripting', 'lua-bindings', 'auto', 'api')
     return docluaDir
 
-class docluaParse:
+class cocos2dxParser:
     #解析模块信息
     def __parseModule(self, s):
         m = re.search(r'--\s+@module\s+(\w+)', s)

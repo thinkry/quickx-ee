@@ -13,7 +13,7 @@ def getQuickxFrameworkDir():
     docluaDir = os.path.join(ret, 'quick', 'framework')
     return docluaDir
 
-class gen:
+class quickxParser:
     def __getModuleByName(self, name, skipLast):
         return ee_module.module.getModuleByName(name, skipLast, self.parents, self.supers, self.renames)
 

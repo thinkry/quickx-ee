@@ -16,7 +16,7 @@
 #   |- quickx3.2-lua5.1.rockspec: 存放最终ee文件中的rockspec文件，该文件不存在时会创建
 #   gen_quickx_ee.py:  本脚本
 
-import sys, os, re, shutil, time, ee_gen, ee_cocos2dx, ee_module
+import sys, os, re, shutil, time, ee_quickx, ee_cocos2dx, ee_module
 
 #--------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ def checkEnv():
         print 'ERROR: lua5.1 directory not exist!'
         return False
 
-    path = ee_gen.getQuickxFrameworkDir()
+    path = ee_quickx.getQuickxFrameworkDir()
     if not path or not os.path.exists(path):
         print 'ERROR: quickx framework directory not exist!'
         return False
@@ -78,13 +78,13 @@ def copyLua():
 
 #对quickx framework生成doclua
 def handleCocos2dx():
-    p = ee_cocos2dx.docluaParse()
+    p = ee_cocos2dx.cocos2dxParser()
     p.doLua()
     p.doCocos2dx()
 
 #对quickx framework生成doclua
 def handleQuickx():
-    g = ee_gen.gen()
+    g = ee_quickx.quickxParser()
     g.doQuickx()
 
 #压缩成zip
