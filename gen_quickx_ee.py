@@ -27,17 +27,17 @@ def checkEnv():
     if not os.path.exists(luaDir):
         print 'ERROR: lua5.1 directory not exist!'
         return False
-    
+
     path = ee_gen.getQuickxFrameworkDir()
     if not path or not os.path.exists(path):
         print 'ERROR: quickx framework directory not exist!'
         return False
 
     path = ee_cocos2dx.getCososDocluaDir()
-    if not os.path.exists(path):
+    if not path or not os.path.exists(path):
         print 'ERROR: cocos2dx doclua directory not exist!'
         return False
-    
+
     return True
 
 #创建release目录及子目录，如果目录已存在则清空目录里的文件
@@ -77,7 +77,7 @@ def copyLua():
     shutil.copytree(src, dst)
 
 #对quickx framework生成doclua
-def handleQuickx():
+def handleCocos2dx():
     p = ee_cocos2dx.docluaParse()
     p.doLua()
     p.doCocos2dx()
@@ -106,7 +106,7 @@ def main():
     copyLua()
 
     #把cocos2dx doclua边复制，边处理到对应位置下
-    #handleCocos2dx()
+    handleCocos2dx()
     
     #对quickx framework生成doclua
     handleQuickx()

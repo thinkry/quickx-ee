@@ -18,6 +18,52 @@ def main():
         print 'ERROR: quickx framework directory not exist!'
         return
     
+    #不处理的文件
+    comments = ['.\\init.lua', 
+                '.\\cc\\init.lua', 
+                '.\\cc\\mvc\\init.lua', 
+                '.\\cc\\net\\init.lua', 
+                '.\\cc\\ui\\init.lua', 
+                '.\\cc\\uiloader\\CCSSceneLoader.lua', 
+                '.\\cc\\uiloader\\CCSUILoader.lua', 
+                '.\\cc\\uiloader\\UILoaderUtilitys.lua', 
+                '.\\cc\\utils\\init.lua', 
+                '.\\deprecated\\deprecated_functions.lua', 
+                '.\\platform\\android.lua', 
+                '.\\platform\\ios.lua', 
+                '.\\platform\\mac.lua'
+                ]
+    
+    #特别处理的文件
+    specails = {
+        # src : [vars, parents, supers, renames]
+        '.\\functions.lua' : ['string', '', '', ''], 
+        '.\\json.lua' : ['', '', '', ''], 
+        '.\\shortcodes.lua' : ['', 'Node>cc|Sprite>cc|Layer>cc', '', ''], 
+        '.\\cc\\components\\behavior\\EventProtocol.lua' : ['', 'EventProtocol>cc.components', 'EventProtocol>cc.components.Component', ''],
+        '.\\cc\\components\\behavior\\StateMachine.lua' : ['', 'StateMachine>cc.components', 'StateMachine>cc.components.Component', ''],
+        '.\\cc\\components\\ui\\BasicLayoutProtocol.lua' : ['', 'BasicLayoutProtocol>cc.components', 'BasicLayoutProtocol>cc.components.Component', ''], 
+        '.\\cc\\components\\ui\\DraggableProtocol.lua' : ['', 'DraggableProtocol>cc.components', 'DraggableProtocol>cc.components.Component', ''],
+        '.\\cc\\components\\ui\\LayoutProtocol.lua' : ['', 'LayoutProtocol>cc.components', 'DraggableProtocol>cc.components.BasicLayoutProtocol', ''],
+        #'.\\cc\\net\\SocketTCP.lua' : ['', 'SocketTCP>cc.net', '', ''],
+        '.\\cc\\sdk\\Store.lua' : ['', 'pay>cc.sdk', '', 'Store>pay'], 
+        '.\\cc\\ui\\UIBoxLayout.lua' : ['UIBoxLayout', 'UIBoxLayout>cc.ui', 'UIBoxLayout>cc.ui.UILayout', ''], 
+        '.\\cc\\ui\\UICheckBoxButton.lua' : ['UICheckBoxButton', 'UICheckBoxButton>cc.ui', 'UICheckBoxButton>cc.ui.UIButton', ''], 
+        '.\\cc\\ui\\UICheckBoxButtonGroup.lua' : ['UICheckBoxButtonGroup', 'UICheckBoxButtonGroup>cc.ui', 'UICheckBoxButtonGroup>cc.ui.UIGroup', ''], 
+        '.\\cc\\ui\\UIPushButton.lua' : ['UIPushButton', 'UIPushButton>cc.ui', 'UIPushButton>cc.ui.UIButton', ''], 
+        '.\\cc\\uiloader\\init.lua' : ['uiloader', 'uiloader>cc', '', ''], 
+        '.\\cc\\utils\\ByteArrayVarint.lua' : ['ByteArrayVarint', 'ByteArrayVarint>cc.utils', 'ByteArrayVarint>cc.utils.ByteArray', ''], 
+        '.\\cocos2dx\\Cocos2d.lua' : ['cc', '', '', ''], 
+        '.\\cocos2dx\\Cocos2dConstants.lua' : ['cc', '', '', ''], 
+        '.\\cocos2dx\\DrawNodeEx.lua' : ['cc', 'DrawNode>cc', '', ''], 
+        '.\\cocos2dx\\Event.lua' : ['c', '', '', 'c>cc'],
+        '.\\cocos2dx\\NodeEx.lua' : ['c', 'Node>cc', '', 'c>cc'], 
+        '.\\cocos2dx\\OpenglConstants.lua' : ['gl', '', '', ''], 
+        '.\\cocos2dx\\SceneEx.lua' : ['c', 'Scene>cc', '', 'c>cc'], 
+        '.\\cocos2dx\\SpriteEx.lua' : ['c', 'Sprite>cc', '', 'c>cc'], 
+        '.\\cocos2dx\\StudioConstants.lua' : ['ccs', '', '', '']
+    }
+
     cwd = os.getcwd()
     os.chdir(docluaDir)
     ret = '#luafile, vars, parent_module, super, renames' + os.linesep
@@ -27,29 +73,30 @@ def main():
             src = os.path.join(root, file)
             basename = os.path.basename(src)
             
-            #注释掉各模块的init.lua
-            if basename == 'init.lua':
-                isComment = True
-            
-            #这些文件也注释掉
-            if src in ['.\deprecated\deprecated_functions.lua', '.\debug.lua']:
+            #要忽略的文件
+            if src in comments:
                 isComment = True
 
-            module = os.path.splitext(basename)[0]
-            tmp = src.split(os.sep)
-            if len(tmp) > 1:
-                parent = '.'.join(tmp[0:-1])
-                if parent == '.': parent = ''
-                else: parent = parent.strip('.')
+            #特别处理的文件
+            if src in specails:
+                if isComment: ret += '#'
+                srcv = specails[src]
+                ret += '%s, %s, %s, %s, %s' % (src, srcv[0], srcv[1], srcv[2], srcv[3]) + os.linesep
             else:
-                parent = ''
-                
-            if isComment:
-                ret += '#'
-            if parent == '':
-                ret += '%s, %s, , , ' % (src, module) + os.linesep
-            else:
-                ret += '%s, %s, %s>%s, , ' % (src, module, module, parent) + os.linesep
+                module = os.path.splitext(basename)[0]
+                tmp = src.split(os.sep)
+                if len(tmp) > 1:
+                    parent = '.'.join(tmp[0:-1])
+                    if parent == '.': parent = ''
+                    else: parent = parent.strip('.')
+                else:
+                    parent = ''
+                    
+                if isComment: ret += '#'
+                if parent == '':
+                    ret += '%s, %s, , , ' % (src, module) + os.linesep
+                else:
+                    ret += '%s, %s, %s>%s, , ' % (src, module, module, parent) + os.linesep
             
     os.chdir(cwd)
     open('quickx.ini', 'wb').write(ret)

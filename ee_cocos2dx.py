@@ -29,10 +29,16 @@ class docluaParse:
         supers = {}
         m = re.search(r'--\s+@extend\s+(\w+)', s)
         if m:
-            supers[modname] = m.group(1).strip()
-        
+            if modname in parents:  #按我们的命名规则，这里要写fullname
+                supers[modname] = parents[modname] + '.' + m.group(1).strip()
+            else:
+                supers[modname] = m.group(1).strip()
+
         mod = ee_module.module.getModuleByName(modname, False, parents, supers)
-        mod.comment = re.compile(r'@extend[ \t]+').sub(r'@extends ', s)  #把@extend改为extends
+        if modname in parents:
+            mod.comment = re.compile(r'(@extend)[ \t]+(\w+)').sub(r'\1s %s.\2#\2' % parents[modname], s)
+        else:
+            mod.comment = re.compile(r'@extend[ \t]+').sub(r'@extends ', s)  #把@extend改为extends
         return mod
 
     #处理每一块
@@ -73,7 +79,7 @@ class docluaParse:
             self.__parseItem(item, mod)
 
     def doLua(self):
-        my = getCurrDir()
+        my = ee_module.getCurrDir()
         docluaDir = os.path.join(my, 'lua5.1', 'api')
         for root, dirs, files in os.walk(docluaDir):
             for file in files:
@@ -81,7 +87,7 @@ class docluaParse:
                 self.doFile(src)
 
     def doCocos2dx(self):
-        docluaDir = docluaParse.getCososDocluaDir()
+        docluaDir = getCososDocluaDir()
         if not docluaDir:
             return
 

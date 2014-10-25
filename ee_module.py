@@ -27,7 +27,7 @@ class field:
     def str(self):
         parent = 'global'
         if self.parent:
-            parent = self.parent.fullName()
+            parent = self.parent.name
 
         if len(self.comment) > 0:
             return self.comment
@@ -46,7 +46,7 @@ class function:
         
         parent = 'global'
         if self.parent:
-            parent = self.parent.fullName()
+            parent = self.parent.name
         return const.lineDelim + '%s@function [parent=#%s] %s' % (const.lineBegin, parent, self.name) + const.EOL
 
 class module:
@@ -67,13 +67,6 @@ class module:
         self.functions = []
         self.children = {}   #子模块
 
-    def str(self):
-        ret = const.lineDelim + const.lineBegin + '@module %s' % module + const.EOL
-        if self.parent and self.parent <> '':
-            ret += const.lineBegin + '@extends %s#%s' % (self.parent, self.parent) + const.EOL
-        ret += const.EOL
-        return ret
-
     #返回模块的全名
     def fullName(self):
         ret = self.name
@@ -84,14 +77,18 @@ class module:
         return ret
 
     def addFunction(self, function):
-        if not function.name in self.functions:
-            function.parent = self
-            self.functions.append(function)
+        for f in self.functions:
+            if f.name == function.name:
+                return
+        function.parent = self
+        self.functions.append(function)
 
     def addField(self, field):
-        if not field.name in self.fields:
-            field.parent = self
-            self.fields.append(field)
+        for f in self.fields:
+            if f.name == field.name:
+                return
+        field.parent = self
+        self.fields.append(field)
 
     def output(self, dir):
         #先输出module信息
@@ -101,14 +98,17 @@ class module:
             s = const.lineDelim
             s += const.lineBegin + '@module %s' % self.name + const.EOL
             if self.extends <> '':
-                s += const.lineBegin + '@extends %s' % self.extends + const.EOL
+                tmp = self.extends.split('.')[-1]
+                s += const.lineBegin + '@extends %s#%s' % (self.extends, tmp) + const.EOL
             s += const.EOL + const.EOL
 
         #输出preloaded module信息
         for child in self.children:
-            modname = self.children[child].name
+            mod = self.children[child]
+            modname = mod.name
             s += const.lineDelim
-            s += const.lineBegin + '@field [parent = #%s] %s#%s %s preloaded module' % (self.fullName(), modname, modname, modname) + const.EOL + const.EOL
+            s += const.lineBegin + '@field [parent = #%s] %s#%s %s preloaded module' % \
+                (self.name, mod.fullName(), modname, modname) + const.EOL + const.EOL
 
         for function in self.functions:
             s += function.str() + const.EOL
@@ -124,15 +124,18 @@ class module:
     #根据一个字符串返回module
     # @param name
     # @param skipLast 表明name的最后一段是不是函数或变量, 例如cc.net.Socket:test  cc.sdk.pay
-    # @param parents 用来指定模块的父模块信息，例如Store>cc，模块名是shortname，父模块名是fullname
-    # @param supers 用来指定模块的基类信息，例如Store>cc.Ref，模块名是shortname，基类是fullname
+    # @param parents 用来指定模块的父模块信息，例如pay>cc，模块名是shortname，父模块名是fullname
+    # @param supers 用来指定模块的基类信息，例如pay>cc.Ref，模块名是shortname，基类是fullname
     # @param renames 用来指定模块的重命名信息，例如Store>pay，模块名是shortname，新名字也是shortname
     @classmethod
     def getModuleByName(cls, name, skipLast, parents = None, supers = None, renames = None):
         ms = name.strip().replace(':', '.').split('.')
-        if len(ms) == 1:
-            if skipLast: return cls.root()  #类似printf/class这种顶级函数
+        if len(ms) == 1 and skipLast:
+            return cls.root()  #类似printf/class这种顶级函数
 
+        if skipLast: ms = ms[:-1]
+
+        if len(ms) == 1:
             m = ms[0]
             if m == 'global':
                 return cls.root()
@@ -160,7 +163,6 @@ class module:
                 return mod
         else:
             ret = cls.root()
-            if skipLast: ms = ms[:-1]
             for m in ms:
                 if m in ret.children:
                     ret = ret.children[m]
@@ -172,7 +174,6 @@ class module:
                     ret.children[m] = tmp
                     ret = tmp
             return ret
-
 
     @staticmethod
     def __output(m, dir):

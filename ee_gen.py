@@ -14,9 +14,6 @@ def getQuickxFrameworkDir():
     return docluaDir
 
 class gen:
-    def __init__(self):
-        pass
-    
     def __getModuleByName(self, name, skipLast):
         return ee_module.module.getModuleByName(name, skipLast, self.parents, self.supers, self.renames)
 
@@ -27,7 +24,7 @@ class gen:
         if not m: return
 
         shortName = funcName.replace(':', '.').split('.')[-1]
-        parent = m.fullName()
+        parent = m.name
         s = '\n' + comment.strip('-[]\r\n\t ').strip()
 
         #每行前面加上-- ，这是ee的要求
@@ -72,7 +69,6 @@ class gen:
         #先获取函数名
         funcName = self.__getFuncName(functionStart, functionEnd)
         if funcName == '':
-            print 'ERROR: can not get function name!'
             return
 
         if commentStart >= 0 and commentEnd >= 0:
@@ -90,7 +86,7 @@ class gen:
         if not m: return
 
         shortName = varName.split('.')[-1]
-        parent = m.fullName()
+        parent = m.name
         s = '\n' + comment.strip('-[]\r\n\t ').strip()
 
         #每行前面加上-- ，这是ee的要求
