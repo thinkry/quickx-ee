@@ -40,8 +40,8 @@ class quickxParser:
 
         #把@param string这种替换为@param #string
         p = re.compile(r'(.*)(@param[ \t]+)(string|number|table|function|integer|boolean|mixed)([^\n\r]*)')
-        tmp = p.sub(r'\1\2\4,\3', tmp)
-        
+        tmp = p.sub(r'\1\2#\3\4', tmp)
+
         f = ee_module.function(shortName)
         f.comment = tmp
         m.addFunction(f)

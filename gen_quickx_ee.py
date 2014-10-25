@@ -16,7 +16,7 @@
 #   |- quickx3.2-lua5.1.rockspec: 存放最终ee文件中的rockspec文件，该文件不存在时会创建
 #   gen_quickx_ee.py:  本脚本
 
-import sys, os, re, shutil, time, ee_quickx, ee_cocos2dx, ee_module
+import sys, os, re, shutil, time, zipfile, ee_quickx, ee_cocos2dx, ee_module
 
 #--------------------------------------------------------------------
 
@@ -89,7 +89,37 @@ def handleQuickx():
 
 #压缩成zip
 def zipEe():
-    pass
+    my = ee_module.getCurrDir()
+    
+    #压缩出api.zip
+    apiZip = os.path.join(my, 'release', 'api.zip')
+    if os.path.exists(apiZip): os.remove(apiZip)
+
+    apiDir = os.path.join(my, 'release', 'api')
+    cwd = os.getcwd()
+    os.chdir(apiDir)
+    f = zipfile.ZipFile(apiZip, 'w', zipfile.ZIP_DEFLATED)
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            f.write(os.path.join(root, file))
+    f.close()
+    os.chdir(cwd)
+
+    #压缩出ee.zip
+    eeZip = os.path.join(my, 'quickx-ee.zip')
+    if os.path.exists(eeZip): os.remove(eeZip)
+    
+    srcDir = os.path.join(my, 'release')
+    cwd = os.getcwd()
+    os.chdir(srcDir)
+    f = zipfile.ZipFile(eeZip, 'w', zipfile.ZIP_DEFLATED)
+    for root, dirs, files in os.walk('docs'):
+        for file in files:
+            f.write(os.path.join(root, file))
+    f.write('api.zip')
+    f.write('quickx3.2-lua5.1.rockspec')
+    f.close()
+    os.chdir(cwd)
 
 #--------------------------------------------------------------------
 def main():

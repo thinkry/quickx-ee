@@ -57,12 +57,5 @@ class parser:
         #找到最近的那个token后
         if rtoken:
             self.__pos = rend
-            # @test
-            #if rtoken.name == 'blockComment':
-            #   e = rstart + 80
-            #    if e > rend: e = rend
-            #else:
-            #    e = self.__s.find('\n', rend)
-            #print rtoken.name, rstart, rend - rstart, self.__s[rstart:e].replace('\r', '').replace('\n', '')
-        
+
         return rtoken
